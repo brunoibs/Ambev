@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Customer\**" />
+    <EmbeddedResource Remove="Customer\**" />
+    <None Remove="Customer\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ambev.DeveloperEvaluation.Domain\Ambev.DeveloperEvaluation.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="13.0.1" />    
+    <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="OneOf" Version="3.0.271" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Branch\Create\" />
+    <Folder Include="Branch\Delete\" />
+    <Folder Include="Branch\Get\" />
+    <Folder Include="Branch\List\" />
+    <Folder Include="ProductSale\Create\" />
+    <Folder Include="ProductSale\Delete\" />
+    <Folder Include="ProductSale\Get\" />
+    <Folder Include="ProductSale\List\" />
+    <Folder Include="Product\Create\" />
+    <Folder Include="Product\Delete\" />
+    <Folder Include="Product\Get\" />
+    <Folder Include="Product\List\" />
+    <Folder Include="Sale\Create\" />
+    <Folder Include="Sale\Delete\" />
+    <Folder Include="Sale\Get\" />
+    <Folder Include="Sale\List\" />
+  </ItemGroup>
+
+</Project>
