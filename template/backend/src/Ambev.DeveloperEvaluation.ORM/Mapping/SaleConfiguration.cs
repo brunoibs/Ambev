@@ -24,6 +24,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(s => s.IdCreate).IsRequired();
         builder.Property(s => s.IdEdit);
         builder.Property(s => s.IdCancel);
+        builder.Property(s => s.IdBranch).IsRequired();
 
         // Configurar relacionamento com ProductSale com delete em cascata
         builder.HasMany(s => s.ProductSales)

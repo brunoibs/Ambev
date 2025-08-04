@@ -20,6 +20,7 @@ public class CreateSaleCommand : IRequest<CreateSaleResult>
     public Guid IdCreate { get; set; }
     public Guid? IdEdit { get; set; }
     public Guid? IdCancel { get; set; }
+    public Guid IdBranch { get; set; }
     
     /// <summary>
     /// Lista de itens da venda (ProductSale)

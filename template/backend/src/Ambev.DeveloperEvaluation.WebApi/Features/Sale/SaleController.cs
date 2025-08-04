@@ -10,6 +10,8 @@ using Ambev.DeveloperEvaluation.Application.Sale.Create;
 using Ambev.DeveloperEvaluation.Application.Sale.Get;
 using Ambev.DeveloperEvaluation.Application.Sale.Delete;
 using Ambev.DeveloperEvaluation.Application.Sale.List;
+using FluentValidation;
+using Ambev.DeveloperEvaluation.Common.Validation;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Features.Sale;
 
@@ -17,7 +19,7 @@ namespace Ambev.DeveloperEvaluation.WebApi.Features.Sale;
 /// Controller para gerenciar operações de vendas
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/sale")] // Rota estática específica
 public class SaleController : BaseController
 {
     private readonly IMediator _mediator;
@@ -45,14 +47,27 @@ public class SaleController : BaseController
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CreateSale([FromBody] CreateSaleRequest request, CancellationToken cancellationToken)
     {
-        var validator = new CreateSaleRequestValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-            return BadRequest(validationResult.Errors);
-
         try
         {
+            var validator = new CreateSaleRequestValidator();
+            var validationResult = await validator.ValidateAsync(request, cancellationToken);
+
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors.Select(e => new ValidationErrorDetail
+                {
+                    Error = e.PropertyName,
+                    Detail = e.ErrorMessage
+                }).ToList();
+
+                return BadRequest(new ApiResponse
+                {
+                    Success = false,
+                    Message = "Dados inválidos na requisição",
+                    Errors = errors
+                });
+            }
+
             var command = _mapper.Map<CreateSaleCommand>(request);
             var response = await _mediator.Send(command, cancellationToken);
 
@@ -63,12 +78,42 @@ public class SaleController : BaseController
                 Data = _mapper.Map<CreateSaleResponse>(response)
             });
         }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new ApiResponse
+            {
+                Success = false,
+                Message = "Erro de validação",
+                Errors = new List<ValidationErrorDetail>
+                {
+                    new ValidationErrorDetail
+                    {
+                        Error = "ValidationError",
+                        Detail = ex.Message
+                    }
+                }
+            });
+        }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            // Log do erro para debug
+            Console.WriteLine($"Erro na criação da venda: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            
+            return BadRequest(new ApiResponse
+            {
+                Success = false,
+                Message = "Erro interno do servidor",
+                Errors = new List<ValidationErrorDetail>
+                {
+                    new ValidationErrorDetail
+                    {
+                        Error = "InternalError",
+                        Detail = ex.Message
+                    }
+                }
+            });
         }
-
-
     }
 
     /// <summary>

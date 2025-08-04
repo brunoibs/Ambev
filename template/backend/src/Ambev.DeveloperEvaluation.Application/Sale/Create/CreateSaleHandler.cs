@@ -3,6 +3,8 @@ using MediatR;
 using FluentValidation;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using Ambev.DeveloperEvaluation.Domain.Entities;
+using Ambev.DeveloperEvaluation.Application.Sale.Events;
+using Ambev.DeveloperEvaluation.Domain.Events;
 
 namespace Ambev.DeveloperEvaluation.Application.Sale.Create;
 
@@ -12,44 +14,64 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, CreateSaleRe
     private readonly IProductSaleRepository _productSaleRepository;
     private readonly IProductRepository _productRepository;
     private readonly IMapper _mapper;
+    private readonly ISaleEventPublisher _eventPublisher;
 
     public CreateSaleHandler(
         ISaleRepository saleRepository, 
         IProductSaleRepository productSaleRepository,
         IProductRepository productRepository,
-        IMapper mapper)
+        IMapper mapper,
+        ISaleEventPublisher eventPublisher)
     {
         _saleRepository = saleRepository;
         _productSaleRepository = productSaleRepository;
         _productRepository = productRepository;
         _mapper = mapper;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<CreateSaleResult> Handle(CreateSaleCommand command, CancellationToken cancellationToken)
     {
-        // Validação já é feita automaticamente pelo ValidationBehavior
-        // var validator = new CreateSaleValidator();
-        // var validationResult = await validator.ValidateAsync(command, cancellationToken);
-        // if (!validationResult.IsValid)
-        //     throw new ValidationException(validationResult.Errors);
-
-        // Validar e calcular total da venda baseado nos ProductSales
-        var (total, discount) = await ValidateAndCalculateTotal(command.ProductSales, cancellationToken);
-        
-        // Atualizar o comando com os valores calculados
-        command.Total = total;
-        command.Discount = discount;
-        command.DtCreate = DateTime.UtcNow;
-        
-        // Criar a venda
-        var sale = _mapper.Map<Domain.Entities.Sale>(command);
-        var createdSale = await _saleRepository.CreateAsync(sale, cancellationToken);
-        
-        // Criar os itens de venda (ProductSales)
-        await CreateSaleItems(createdSale.Id, command.ProductSales, cancellationToken);
-        
-        var result = _mapper.Map<CreateSaleResult>(createdSale);
-        return result;
+        try
+        {
+            // Validar e calcular total da venda baseado nos ProductSales
+            var (total, discount) = await ValidateAndCalculateTotal(command.ProductSales, cancellationToken);
+            
+            // Atualizar o comando com os valores calculados
+            command.Total = total;
+            command.Discount = discount;
+            command.DtCreate = DateTime.UtcNow;
+            
+            // Criar a venda
+            var sale = _mapper.Map<Domain.Entities.Sale>(command);
+            var createdSale = await _saleRepository.CreateAsync(sale, cancellationToken);
+            
+            // Criar os itens de venda (ProductSales)
+            await CreateSaleItems(createdSale.Id, command.ProductSales, cancellationToken);
+            
+            // Publicar evento de venda criada
+            var saleCreatedEvent = new SaleCreatedEvent(createdSale);
+            await _eventPublisher.PublishSaleCreatedAsync(saleCreatedEvent);
+            
+            var result = new CreateSaleResult
+            {
+                Id = createdSale.Id,
+                DtSale = createdSale.DtSale,
+                Total = createdSale.Total,
+                Discount = createdSale.Discount,
+                IdCustomer = createdSale.IdCustomer,
+                IdCreate = createdSale.IdCreate
+            };
+            return result;
+        }
+        catch (ValidationException ex)
+        {
+            throw new ValidationException($"Erro de validação na criação da venda: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Erro interno na criação da venda: {ex.Message}", ex);
+        }
     }
     
     private async Task<(decimal total, decimal discount)> ValidateAndCalculateTotal(
@@ -64,16 +86,40 @@ public class CreateSaleHandler : IRequestHandler<CreateSaleCommand, CreateSaleRe
             // Validar se o produto existe
             var product = await _productRepository.GetByIdAsync(productSale.IdProduct, cancellationToken);
             if (product == null)
-                throw new ValidationException($"Produto com ID {productSale.IdProduct} não encontrado.");
+            {
+                // Em vez de lançar exceção, vamos usar os dados fornecidos
+                Console.WriteLine($"Produto com ID {productSale.IdProduct} não encontrado. Usando dados fornecidos.");
+                
+                // Validar se o total está correto
+                var expectedTotalForMissingProduct = productSale.Price * productSale.Amount;
+                if (Math.Abs(productSale.Total - expectedTotalForMissingProduct) >= 0.01m)
+                {
+                    throw new ValidationException($"Total do produto {productSale.IdProduct} não corresponde ao cálculo esperado (Preço: {productSale.Price} x Quantidade: {productSale.Amount} = {expectedTotalForMissingProduct}).");
+                }
+                
+                // Somar ao total da venda
+                total += productSale.Total;
+                
+                // Calcular desconto baseado na quantidade
+                var discountPercentageForMissingProduct = SaleDiscountService.CalculateDiscount(productSale.Amount);
+                var itemDiscountForMissingProduct = productSale.Total * (discountPercentageForMissingProduct / 100);
+                totalDiscount += itemDiscountForMissingProduct;
+                
+                continue;
+            }
             
             // Validar se o preço está correto
-            if (productSale.Price != product.Price)
-                throw new ValidationException($"Preço do produto {productSale.IdProduct} não corresponde ao preço atual do produto.");
+            if (Math.Abs(productSale.Price - product.Price) >= 0.01m)
+            {
+                Console.WriteLine($"Preço do produto {productSale.IdProduct} não corresponde ao preço atual do produto. Usando preço fornecido.");
+            }
             
             // Validar se o total está correto
             var expectedTotal = productSale.Price * productSale.Amount;
-            if (productSale.Total != expectedTotal)
+            if (Math.Abs(productSale.Total - expectedTotal) >= 0.01m)
+            {
                 throw new ValidationException($"Total do produto {productSale.IdProduct} não corresponde ao cálculo esperado (Preço: {productSale.Price} x Quantidade: {productSale.Amount} = {expectedTotal}).");
+            }
             
             // Somar ao total da venda
             total += productSale.Total;

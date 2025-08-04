@@ -27,6 +27,12 @@ public class CreateSaleRequest
     public Guid IdCreate { get; set; }
 
     /// <summary>
+    /// ID da filial onde a venda será realizada
+    /// </summary>
+    [Required]
+    public Guid IdBranch { get; set; }
+
+    /// <summary>
     /// Lista de itens da venda (ProductSales)
     /// </summary>
     [Required]

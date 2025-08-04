@@ -63,6 +63,11 @@ public class Sale : BaseEntity
     /// </summary>
     public Guid? IdCancel { get; set; }
 
+    /// <summary>
+    /// Obtém ou define o Id da filial onde a venda foi realizada.
+    /// </summary>
+    public Guid IdBranch { get; set; }
+
     public virtual List<ProductSale> ProductSales { get; set; } = new List<ProductSale>();
 
     /// <summary>

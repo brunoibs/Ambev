@@ -8,7 +8,7 @@ public class BranchConfiguration : IEntityTypeConfiguration<Branch>
 {
     public void Configure(EntityTypeBuilder<Branch> builder)
     {
-        builder.ToTable("Bransh");
+        builder.ToTable("Branch");
 
         builder.HasKey(b => b.Id);
         builder.Property(b => b.Id).HasDefaultValueSql("gen_random_uuid()");

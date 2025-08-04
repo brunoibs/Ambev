@@ -11,6 +11,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Ambev.DeveloperEvaluation.WebApi;
 
@@ -27,7 +28,21 @@ public class Program
             Console.WriteLine("WebApplicationBuilder created");
             builder.AddDefaultLogging();
 
-            builder.Services.AddControllers();
+            // Configuração explícita do MVC
+            builder.Services.AddControllers(options =>
+            {
+                options.SuppressAsyncSuffixInActionNames = false;
+            })
+            .AddApplicationPart(typeof(Program).Assembly)
+            .AddControllersAsServices();
+
+            // Configuração explícita de roteamento
+            builder.Services.AddRouting(options =>
+            {
+                options.LowercaseUrls = true;
+                options.LowercaseQueryStrings = true;
+            });
+
             builder.Services.AddEndpointsApiExplorer();
 
             builder.AddBasicHealthChecks();
@@ -109,6 +124,9 @@ public class Program
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseBasicHealthChecks();
+            
+            // Configuração explícita do roteamento
+            app.UseRouting();
             app.MapControllers();
 
             Console.WriteLine("Starting application...");

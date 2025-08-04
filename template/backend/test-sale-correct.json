@@ -1,0 +1,20 @@
+{
+  "dtSale": "2024-01-15T14:30:00Z",
+  "idCustomer": "7784319a-5eaf-408f-b8e5-40d6506ffd54",
+  "idCreate": "7784319a-5eaf-408f-b8e5-40d6506ffd54",
+  "idBranch": "51d8f4bb-5fb6-4f3e-b1c6-0966a9f0f34a",
+  "productSales": [
+    {
+      "idProduct": "039e444c-028e-4d7e-b564-b30a2ca11167",
+      "amount": 10,
+      "price": 7.00,
+      "total": 70.00
+    },
+    {
+      "idProduct": "bbe8a82a-58ea-41d6-a6cf-073ac3adc8d9",
+      "amount": 10,
+      "price": 3.00,
+      "total": 30.00
+    }
+  ]
+} 

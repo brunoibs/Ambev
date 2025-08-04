@@ -21,6 +21,10 @@ public class CreateSaleRequestValidator : AbstractValidator<CreateSaleRequest>
             .NotEmpty()
             .WithMessage("O ID do usuário que está criando a venda é obrigatório");
 
+        RuleFor(x => x.IdBranch)
+            .NotEmpty()
+            .WithMessage("O ID da filial é obrigatório");
+
         RuleFor(x => x.ProductSales)
             .NotEmpty()
             .WithMessage("A venda deve ter pelo menos um item");
@@ -55,7 +59,11 @@ public class ProductSaleRequestValidator : AbstractValidator<ProductSaleRequest>
             .WithMessage("O total deve ser maior que zero");
 
         RuleFor(x => x.Total)
-            .Must((request, total) => total == request.Price * request.Amount)
-            .WithMessage("O total deve corresponder ao cálculo (Preço x Quantidade)");
+            .Must((request, total) => 
+            {
+                var expectedTotal = request.Price * request.Amount;
+                return Math.Abs(total - expectedTotal) < 0.01m; // Tolerância para diferenças de ponto flutuante
+            })
+            .WithMessage(x => $"O total deve corresponder ao cálculo (Preço: {x.Price} x Quantidade: {x.Amount} = {x.Price * x.Amount})");
     }
 } 
